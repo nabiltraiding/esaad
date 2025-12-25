@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- منع الـ Zoom نهائياً -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Esaad</title>
 
-    <!-- App Config -->
+    <!-- PWA Config -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Esaad">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,7 +17,9 @@
     <link rel="icon" type="image/jpeg" href="logo.jpg">
 
     <style>
-        * { box-sizing: border-box; }
+        /* منع أي حركة Touch زيادة (Scroll/Zoom) */
+        * { box-sizing: border-box; touch-action: none; }
+        
         body, html {
             margin: 0; padding: 0; 
             width: 100%; height: 100%;
@@ -24,26 +27,11 @@
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
             font-family: sans-serif;
+            /* منع السحب (Rubber banding) في iOS */
+            overscroll-behavior: none;
         }
 
-        /* Video Container */
-        #video-container {
-            position: absolute; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%;
-            z-index: 1;
-            visibility: hidden; 
-            opacity: 0;
-            transition: opacity 0.8s ease; 
-        }
-
-        #main-video {
-            width: 100%;
-            height: 100%;
-            object-fit: fill; /* Forces full screen fit */
-        }
-
-        /* Splash Screen */
+        /* 1. Splash Screen Style */
         #start-screen {
             position: absolute; top: 0; left: 0; 
             width: 100%; height: 100%;
@@ -51,8 +39,8 @@
             display: flex;
             justify-content: center; 
             align-items: center;
-            z-index: 10; 
-            transition: opacity 0.8s ease, visibility 0.8s;
+            z-index: 20; 
+            transition: opacity 0.5s ease, visibility 0.5s;
         }
 
         #app-logo {
@@ -61,6 +49,43 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
             object-fit: cover;
             animation: breathe 2s infinite ease-in-out;
+        }
+
+        /* 2. Video Container Style */
+        #video-container {
+            position: absolute; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%;
+            z-index: 10;
+            visibility: hidden; 
+            opacity: 0;
+            transition: opacity 0.5s ease; 
+        }
+
+        #main-video {
+            width: 100%;
+            height: 100%;
+            object-fit: fill; /* ع قد الشاشة بالمللي */
+            pointer-events: none; /* الفيديو ما بيستقبل كبسات، الكبسة للكونتينر */
+        }
+
+        /* 3. Final Card Image Style */
+        #card-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 30; /* أعلى طبقة */
+            visibility: hidden;
+            opacity: 0;
+            background-color: #00764b; /* خلفية خضرا ورا الصورة */
+            transition: opacity 0.5s ease;
+        }
+
+        #final-card {
+            width: 100%;
+            height: 100%;
+            object-fit: fill; /* بيغطي الشاشة كلها */
+            display: block;
         }
 
         @keyframes breathe {
@@ -72,51 +97,77 @@
 </head>
 <body>
 
+    <!-- 1. Splash Screen -->
     <div id="start-screen">
         <img src="logo.jpg" id="app-logo" alt="Esaad Logo">
     </div>
 
-    <div id="video-container">
-        <!-- 
-           Removed 'loop'. 
-           Video will play once and stop at the last frame.
-        -->
+    <!-- 2. Video Screen -->
+    <!-- حطيت الـ onclick هون كرمال يلقط الكبسة بس يخلص الفيديو -->
+    <div id="video-container" onclick="showCard()">
         <video id="main-video" muted playsinline webkit-playsinline>
             <source src="video.mp4" type="video/mp4">
         </video>
     </div>
 
-    <script>
-        window.addEventListener('load', () => {
-            const startScreen = document.getElementById('start-screen');
-            const videoContainer = document.getElementById('video-container');
-            const video = document.getElementById('main-video');
+    <!-- 3. Card Screen (Final) -->
+    <div id="card-container">
+        <!-- سمّي صورتك الجديدة card.jpg -->
+        <img src="card.jpg" id="final-card" alt="Esaad Card">
+    </div>
 
-            // Wait 1 second on splash
+    <script>
+        // Variables
+        const startScreen = document.getElementById('start-screen');
+        const videoContainer = document.getElementById('video-container');
+        const video = document.getElementById('main-video');
+        const cardContainer = document.getElementById('card-container');
+        
+        let videoEnded = false; // Flag to check if video is done
+
+        window.addEventListener('load', () => {
+            // Step 1: Wait 1 second on Splash
             setTimeout(() => {
-                
-                // Play video
+                // Step 2: Play Video
                 video.play().then(() => {
-                    // Switch to video view
                     startScreen.style.opacity = '0';
                     startScreen.style.visibility = 'hidden';
                     
                     videoContainer.style.visibility = 'visible';
                     videoContainer.style.opacity = '1';
                 }).catch(err => {
-                    // Force play if blocked (rare since no audio)
+                    // Force play if needed
                     console.log("Forcing play");
                     video.muted = true; 
                     video.play();
-                    
                     startScreen.style.opacity = '0';
                     startScreen.style.visibility = 'hidden';
                     videoContainer.style.visibility = 'visible';
                     videoContainer.style.opacity = '1';
                 });
-
-            }, 1000); // Changed to 1000ms (1 second)
+            }, 1000);
         });
+
+        // Step 3: Listen for when video ends
+        video.onended = () => {
+            console.log("Video finished");
+            videoEnded = true; 
+            // الفيديو رح يوقف لحالو ع آخر فريم لأنو ما في Loop
+        };
+
+        // Step 4: Function to show card (called on click)
+        function showCard() {
+            // الشرط: الكبسة ما بتشتغل إلا إذا الفيديو خلصان
+            if (videoEnded) {
+                videoContainer.style.opacity = '0';
+                setTimeout(() => {
+                    videoContainer.style.visibility = 'hidden';
+                }, 500);
+
+                cardContainer.style.visibility = 'visible';
+                cardContainer.style.opacity = '1';
+            }
+        }
     </script>
 </body>
 </html>
